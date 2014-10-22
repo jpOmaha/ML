@@ -1,0 +1,79 @@
+---
+title: "Machine Learning Project"
+author: "jp"
+date: "October 20, 2014"
+output: html_document
+---
+
+Machine Learning Project
+Step-by-step explanation and documentation, from training data to test data.
+
+STEPS:
+Create folder if needed
+```{r}
+if (!file.exists("data")) {dir.create("data")}
+```
+URL and placement
+```{r}
+fileUrl1 <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+destfile1 <- "./data/pml-training.csv"
+fileUrl2 <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+destfile2 <- "./data/pml-testing.csv"
+```
+Download and Date
+```{r}
+download.file(fileUrl1, destfile = destfile1)
+download.file(fileUrl2, destfile = destfile2)
+dateDownloaded <- date()
+```
+Read csv Training Data
+```{r}
+data_training <- read.csv("./data/pml-training.csv", na.strings= c("NA",""," "))
+```
+Remove NAs
+```{r}
+data_training_NAs <- apply(data_training, 2, function(x) {sum(is.na(x))})
+data_training_clean <- data_training[,which(data_training_NAs == 0)]
+```
+Remove Unnecessary Columns
+```{r}
+data_training_clean <- data_training_clean[8:length(data_training_clean)]
+```
+Required Packages
+```{r}
+require(caret)
+require(corrplot)
+require(randomForest)
+require(kernlab)
+```
+Split for Cross-Validation
+```{r}
+inTrain <- createDataPartition(y = data_training_clean$classe, p = 0.7, list = FALSE)
+training <- data_training_clean[inTrain, ]
+crossval <- data_training_clean[-inTrain, ]
+```
+Plot Correlation Matrix
+```{r, echo = FALSE}
+correlMatrix <- cor(training[, -length(training)])
+corrplot(correlMatrix, order = "FPC", method = "circle", type = "lower", tl.cex = 0.8,  tl.col = rgb(0, 0, 0))
+```
+Model classe ~ ALL
+```{r}
+(model <- randomForest(classe ~ ., data = training))
+```
+Cross-Validate
+```{r}
+predictCrossVal <- predict(model, crossval)
+(confusionMatrix(crossval$classe, predictCrossVal))
+```
+Redo with Testing Data
+```{r}
+data_test <- read.csv("./data/pml-testing.csv", na.strings= c("NA",""," "))
+data_test_NAs <- apply(data_test, 2, function(x) {sum(is.na(x))})
+data_test_clean <- data_test[,which(data_test_NAs == 0)]
+data_test_clean <- data_test_clean[8:length(data_test_clean)]
+```
+Predict classe | Test Data
+```{r}
+(predictTest <- predict(model, data_test_clean))
+```
